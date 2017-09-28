@@ -33,7 +33,7 @@ module.exports = env => {
       filename: '[name].[hash].js',
       sourceMapFilename: '[name].[hash].map.js',
       path: path.join(__dirname, '../build/'),
-      // publicPath: '/', can uncomment if you want everything relative to root '/'
+      // publicPath: '/'
     },
 
     module: {
@@ -57,6 +57,10 @@ module.exports = env => {
         {
           test: /\.(png|jpg)$/,
           loader: 'url-loader?limit=8192'
+        },
+        {
+          test: /\.(json)$/,
+          loader: 'json-loader'
         }
       ],
     },

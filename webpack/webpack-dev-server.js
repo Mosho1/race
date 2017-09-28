@@ -20,10 +20,12 @@ const devServerConfig = {
   inline: true,
   https: false,
   lazy: false,
-  contentBase: path.join(__dirname, '../../src/'),
+  contentBase: path.join(__dirname, '../src/'),
   historyApiFallback: { disableDotRule: true }, // Need historyApiFallback to be able to refresh on dynamic route
   stats: { colors: true } // Pretty colors in console
 };
+
+console.log(devServerConfig.contentBase)
 
 try {
   const server = new WebpackDevServer(webpack(webpackConfig(env)), devServerConfig);

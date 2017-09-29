@@ -1,6 +1,5 @@
 import render from './app';
 
-
 let un = render();
 
 if (__DEVELOPMENT__ && module.hot) {

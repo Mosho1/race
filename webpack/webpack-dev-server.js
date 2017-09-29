@@ -29,7 +29,7 @@ const port = process.env.PORT || 3000;
 
 try {
   const server = new WebpackDevServer(webpack(webpackConfig(env)), devServerConfig);
-  server.listen(port, 'localhost');
+  server.listen(port, 'localhost', () => console.log('app is running on port ' + port));
 } catch (e) {
   console.error(e);
 }

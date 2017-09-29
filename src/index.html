@@ -3,6 +3,11 @@
 
 <head>
   <base href="/">
+  <style>
+    table td {
+      vertical-align: top;
+    }
+  </style>
 </head>
 
 <body>
@@ -13,7 +18,19 @@
     </ul>
   </div>
   <br>
-  <div id="App"></div>
+  <table>
+    <tbody>
+      <tr>
+        <td>
+          <div id="App"></div>
+        </td>
+        <td>
+          <p>High scores:</p>
+          <div id="scores"></div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
   <div id="message"></div>
 </body>
 

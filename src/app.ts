@@ -19,24 +19,17 @@ const reset = () => {
     removeAllEventListener();
 };
 
-const randomize = <T>(arr: { obstacle: T, weight: number }[]) => {
+const randomize = <T>(arr: { value: T, weight: number }[]) => {
     const rand = Math.random();
     let cumulative = 0;
     for (let i = 0, len = arr.length; i < len; i++) {
         cumulative += arr[i].weight;
         if (cumulative >= rand) {
-            return arr[i].obstacle;
+            return arr[i].value;
         }
     }
-    return arr[arr.length - 1].obstacle
+    return arr[arr.length - 1].value
 };
-
-interface Collidable {
-    x: number;
-    y: number;
-    height: number;
-    width: number;
-}
 
 const collides = (sprite: PIXI.Sprite, graphics: PIXI.Graphics) => {
     const vertices = sprite.vertexData;
@@ -47,9 +40,27 @@ const collides = (sprite: PIXI.Sprite, graphics: PIXI.Graphics) => {
     return false;
 };
 
+const displayScores = () => {
+    const stored = localStorage.getItem('scores');
+    const scores = stored ? JSON.parse(stored) : [];
+    document.getElementById('scores').innerHTML = `
+        <ul>${scores.map(s => `<li>${s}</li>`).join('')}</ul>
+    `;
+}
+
+const saveScore = (score: number) => {
+    const stored = localStorage.getItem('scores');
+    const scores = stored ? JSON.parse(stored) : [];
+    if (scores.length >= 10) scores.pop();
+    scores.push(score);
+    scores.sort((a, b) => b - a);
+    localStorage.setItem('scores', JSON.stringify(scores));
+    displayScores();
+};
+
 const random = (min: number, max: number) => min + Math.random() * (max - min);
 
-const start = () => {
+const start = (cb) => {
     const Container = PIXI.Container,
         autoDetectRenderer = PIXI.autoDetectRenderer,
         loader = new PIXI.loaders.Loader(),
@@ -74,6 +85,7 @@ const start = () => {
     addEventListener('mousedown', () => isMousePressed = true);
     addEventListener('mouseup', () => isMousePressed = false);
 
+    displayScores();
     //Create a Pixi stage and renderer and add the 
     //renderer.view to the DOM
     const stage = new Container(),
@@ -231,18 +243,18 @@ const start = () => {
         }
     }
 
-    const obstacleWeights: { obstacle: typeof Obstacle, weight: number }[] = [
-        { obstacle: Gate, weight: 0.6 },
-        { obstacle: MovingGate, weight: 0.3 },
-        { obstacle: Maze, weight: 0.1 },
-    ]
+    const obstacleWeights: { value: typeof Obstacle, weight: number }[] = [
+        { value: Gate, weight: 0.6 },
+        { value: MovingGate, weight: 0.3 },
+        { value: Maze, weight: 0.1 },
+    ];
 
     const getObstacle = () => {
         const ObstacleClass = randomize(obstacleWeights);
         const obstacle = new ObstacleClass();
         obstacle.draw();
         return obstacle;
-    }
+    };
 
     function noop() { }
 
@@ -391,82 +403,11 @@ const start = () => {
     }
 
     function end() {
-        document.getElementById('message').innerText = 'Game Over.';
         state = noop;
+        document.getElementById('message').innerText = 'Game Over.';
+        saveScore(player.score);
+        cb();
     }
-
-    /* Helper functions */
-    function contain(sprite, container) {
-        let collision = undefined;
-        //Left
-        if (sprite.x < container.x) {
-            sprite.x = container.x;
-            collision = "left";
-        }
-        //Top
-        if (sprite.y < container.y) {
-            sprite.y = container.y;
-            collision = "top";
-        }
-        //Right
-        if (sprite.x + sprite.width > container.width) {
-            sprite.x = container.width - sprite.width;
-            collision = "right";
-        }
-        //Bottom
-        if (sprite.y + sprite.height > container.height) {
-            sprite.y = container.height - sprite.height;
-            collision = "bottom";
-        }
-        //Return the `collision` value
-        return collision;
-    }
-    //The `hitTestRectangle` function
-    function hitTestRectangle(r1, r2) {
-        //Define the variables we'll need to calculate
-        let hit, combinedHalfWidths, combinedHalfHeights, vx, vy;
-        //hit will determine whether there's a collision
-        hit = false;
-        //Find the center points of each sprite
-        r1.centerX = r1.x + r1.width / 2;
-        r1.centerY = r1.y + r1.height / 2;
-        r2.centerX = r2.x + r2.width / 2;
-        r2.centerY = r2.y + r2.height / 2;
-        //Find the half-widths and half-heights of each sprite
-        r1.halfWidth = r1.width / 2;
-        r1.halfHeight = r1.height / 2;
-        r2.halfWidth = r2.width / 2;
-        r2.halfHeight = r2.height / 2;
-        //Calculate the distance vector between the sprites
-        vx = r1.centerX - r2.centerX;
-        vy = r1.centerY - r2.centerY;
-        //Figure out the combined half-widths and half-heights
-        combinedHalfWidths = r1.halfWidth + r2.halfWidth;
-        combinedHalfHeights = r1.halfHeight + r2.halfHeight;
-        //Check for a collision on the x axis
-        if (Math.abs(vx) < combinedHalfWidths) {
-            //A collision might be occuring. Check for a collision on the y axis
-            if (Math.abs(vy) < combinedHalfHeights) {
-                //There's definitely a collision happening
-                hit = true;
-            } else {
-                //There's no collision on the y axis
-                hit = false;
-            }
-        } else {
-            //There's no collision on the x axis
-            hit = false;
-        }
-        //`hit` will be either `true` or `false`
-        return hit;
-    };
-    //The `randomInt` helper function
-    function randomInt(min, max) {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
-
-
-
 
     //The `keyboard` helper function
     function keyboard(keyCode: number) {
@@ -518,7 +459,15 @@ const start = () => {
 
 const render = () => {
     reset();
-    return start();
+    return start(() => {
+        const un = addEventListener('keyup', () => {
+            const un2 = addEventListener('keydown', () => {
+                render();
+                un2();
+            });
+            un();
+        });
+    });
 };
 
 export default render;

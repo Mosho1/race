@@ -51,10 +51,12 @@ const displayScores = () => {
 const saveScore = (score: number) => {
     const stored = localStorage.getItem('scores');
     const scores = stored ? JSON.parse(stored) : [];
-    if (scores.length >= 10) scores.pop();
-    scores.push(score);
-    scores.sort((a, b) => b - a);
-    localStorage.setItem('scores', JSON.stringify(scores));
+    if (score > scores[scores.length - 1]) {
+        if (scores.length >= 10) scores.pop();
+        scores.push(score);
+        scores.sort((a, b) => b - a);
+        localStorage.setItem('scores', JSON.stringify(scores));
+    }
     displayScores();
 };
 

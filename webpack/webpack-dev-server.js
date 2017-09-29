@@ -25,9 +25,11 @@ const devServerConfig = {
   stats: { colors: true } // Pretty colors in console
 };
 
+const port = process.env.PORT || 3000;
+
 try {
   const server = new WebpackDevServer(webpack(webpackConfig(env)), devServerConfig);
-  server.listen(3000, 'localhost');
+  server.listen(port, 'localhost');
 } catch (e) {
   console.error(e);
 }

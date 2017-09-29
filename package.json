@@ -23,15 +23,7 @@
     "react": "15.6.1",
     "react-dom": "15.6.1",
     "react-hot-loader": "3.0.0-beta.6",
-    "routes": "^2.1.0"
-  },
-  "devDependencies": {
-    "@types/pixi.js": "^4.5.4",
-    "@types/react": "^15.0.38",
-    "@types/react-dom": "^15.5.1",
-    "@types/react-hot-loader": "^3.0.3",
-    "autoprefixer": "^7.1.2",
-    "awesome-typescript-loader": "^3.2.1",
+    "routes": "^2.1.0",
     "cross-env": "^5.0.1",
     "css-loader": "^0.28.4",
     "extract-text-webpack-plugin": "^3.0.0",
@@ -44,5 +36,13 @@
     "url-loader": "^0.5.9",
     "webpack": "^3.2.0",
     "webpack-dev-server": "^2.5.1"
+  },
+  "devDependencies": {
+    "@types/pixi.js": "^4.5.4",
+    "@types/react": "^15.0.38",
+    "@types/react-dom": "^15.5.1",
+    "@types/react-hot-loader": "^3.0.3",
+    "autoprefixer": "^7.1.2",
+    "awesome-typescript-loader": "^3.2.1"
   }
 }

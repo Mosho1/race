@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development node webpack/webpack-dev-server --env.dev",
     "start": "npm run build && cp -r src/images build && node prod-server.js",
-    "build": "cross-env NODE_ENV=production webpack --config webpack/webpack.config.js --progress --env.dev"
+    "build": "cross-env NODE_ENV=production webpack --config webpack/webpack.config.js --progress --env.prod"
   },
   "repository": {
     "type": "git",

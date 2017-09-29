@@ -1,9 +1,11 @@
 import render from './app';
 
-render();
+
+let un = render();
 
 if (__DEVELOPMENT__ && module.hot) {
   module.hot.accept(['./app'], () => {
-    render();
+    un();
+    un = render();
   });
 }

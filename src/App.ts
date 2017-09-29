@@ -1,10 +1,11 @@
 import * as PIXI from 'pixi.js';
 
-const eventHandlers: { eventName: string, handler: EventListenerObject }[] = [];
+const eventHandlers: { eventName: string, handler: any }[] = [];
 
-const addEventListener = (eventName: string, handler: EventListenerObject, ...args) => {
+const addEventListener = (eventName: string, handler: any, ...args) => {
     window.addEventListener(eventName, handler, ...args);
     eventHandlers.push({ eventName, handler });
+    return () => window.removeEventListener(eventName, handler);
 }
 
 const removeAllEventListener = () => {
@@ -14,9 +15,39 @@ const removeAllEventListener = () => {
 };
 
 const reset = () => {
-    document.body.innerHTML = '';
+    document.getElementById('App').innerHTML = '';
     removeAllEventListener();
 };
+
+const randomize = <T>(arr: { obstacle: T, weight: number }[]) => {
+    const rand = Math.random();
+    let cumulative = 0;
+    for (let i = 0, len = arr.length; i < len; i++) {
+        cumulative += arr[i].weight;
+        if (cumulative >= rand) {
+            return arr[i].obstacle;
+        }
+    }
+    return arr[arr.length - 1].obstacle
+};
+
+interface Collidable {
+    x: number;
+    y: number;
+    height: number;
+    width: number;
+}
+
+const collides = (sprite: PIXI.Sprite, graphics: PIXI.Graphics) => {
+    const vertices = sprite.vertexData;
+    for (let i = 0, len = vertices.length; i < len; i += 2) {
+        const point = new PIXI.Point(vertices[i], vertices[i + 1]);
+        if (graphics.containsPoint(point)) return true;
+    }
+    return false;
+};
+
+const random = (min: number, max: number) => min + Math.random() * (max - min);
 
 const start = () => {
     const Container = PIXI.Container,
@@ -28,167 +59,264 @@ const start = () => {
         Sprite = PIXI.Sprite,
         Text = PIXI.Text,
         Graphics = PIXI.Graphics;
+
+    const width = 400, height = 800;
+
+    let y = 0.0;
+    let dy = 0.0;
+    let ddy = 0.4;
+    let dim = 40.0;
+    let max_dy = 50.0;
+    let hole = width / 4;
+
+    let isMousePressed = false;
+
+    addEventListener('mousedown', () => isMousePressed = true);
+    addEventListener('mouseup', () => isMousePressed = false);
+
     //Create a Pixi stage and renderer and add the 
     //renderer.view to the DOM
     const stage = new Container(),
-        renderer = autoDetectRenderer(512, 512);
+        renderer = autoDetectRenderer(width, height);
 
-    document.body.appendChild(renderer.view);
+    document.getElementById('App').appendChild(renderer.view);
 
     loader
-        .add("images/treasureHunter.json")
+        .add("images/rocket.png")
         .load(setup);
+
+    class Obstacle extends Graphics {
+        drawEveryFrame = false;
+        draw() {
+            this.clear();
+        }
+    }
+
+    class Gate extends Obstacle {
+        private gateHeight = dim;
+        private holeWidth = hole;
+        protected holePosition = random(this.holeWidth / width / 2, 1 - this.holeWidth / width / 2);
+
+        draw() {
+            super.draw();
+            this.beginFill(0xffffff);
+            this.drawRect(
+                0,
+                -this.gateHeight,
+                width * this.holePosition - this.holeWidth / 2,
+                this.gateHeight
+            );
+            this.drawRect(
+                width * this.holePosition + this.holeWidth / 2,
+                -this.gateHeight,
+                width * (1 - this.holePosition) - this.holeWidth / 2,
+                this.gateHeight
+            );
+            this.endFill();
+        }
+    }
+
+    class MovingGate extends Gate {
+        private holeSpeed = hole / width / 20;
+        drawEveryFrame = true;
+        draw() {
+            super.draw();
+            if (this.holePosition > 1 - hole / width / 2) {
+                this.holeSpeed *= -1;
+            }
+            if (this.holePosition < hole / width / 2) {
+                this.holeSpeed *= -1;
+            }
+            this.holePosition += this.holeSpeed;
+            super.draw();
+        }
+    }
+
+    class Maze extends Obstacle {
+        private gateHeight = dim;
+        private holeWidth = hole;
+
+        private lowerHolePosition = 0.25;
+        private upperHolePosition = 0.75;
+        private spaceBetween = dim * 7;
+        private middleHolePosition = random(this.holeWidth / this.spaceBetween / 2, 1 - this.holeWidth / this.spaceBetween / 2);
+
+        draw() {
+            super.draw();
+            this.beginFill(0xffffff);
+            this.drawRect(
+                0,
+                -this.gateHeight,
+                width * this.lowerHolePosition - this.holeWidth / 2,
+                this.gateHeight
+            );
+            this.drawRect(
+                width * this.lowerHolePosition + this.holeWidth / 2,
+                -this.gateHeight,
+                width * (1 - this.lowerHolePosition) - this.holeWidth / 2,
+                this.gateHeight
+            );
+            this.drawRect(
+                0,
+                -2 * this.gateHeight - this.spaceBetween,
+                width * this.upperHolePosition - this.holeWidth / 2,
+                this.gateHeight
+            );
+            this.drawRect(
+                width * this.upperHolePosition + this.holeWidth / 2,
+                -2 * this.gateHeight - this.spaceBetween,
+                width * (1 - this.upperHolePosition) - this.holeWidth / 2,
+                this.gateHeight
+            );
+            this.drawRect(
+                (width - this.gateHeight) / 2,
+                -this.gateHeight - (this.spaceBetween * this.middleHolePosition - this.holeWidth / 2),
+                this.gateHeight,
+                this.spaceBetween * this.middleHolePosition - this.holeWidth / 2,
+            );
+            this.drawRect(
+                (width - this.gateHeight) / 2,
+                -this.gateHeight - this.spaceBetween,
+                // -this.gateHeight - (this.spaceBetween * this.middleHolePosition - this.holeWidth / 2),
+                this.gateHeight,
+                this.spaceBetween * (1 - this.middleHolePosition) - this.holeWidth / 2,
+            );
+            // this.drawRect(
+            //     (width - this.gateHeight) / 2,
+            //     -this.gateHeight - this.spaceBetween,
+            //     this.gateHeight,
+            //     (this.spaceBetween - this.holeWidth) * (1 - this.middleHolePosition),
+            // );
+            this.endFill();
+        }
+    }
+
+    class Player extends Sprite {
+
+        private dx = 0;
+        private ddx = 0.25;
+
+        score = 0;
+
+        rotation = 0;
+
+        left() {
+            this.dx -= this.ddx;
+        }
+
+        right() {
+            this.dx += this.ddx;
+        }
+
+        move() {
+            this.dx *= 0.98;
+            this.x += this.dx;
+            let newRotation = Math.PI / 2 - Math.atan2(dy, this.dx);
+            if (Math.abs(Math.abs(newRotation - this.rotation) - Math.PI) > 1e-8) {
+                this.rotation = newRotation;
+            }
+        }
+
+        constructor(sprite: PIXI.Texture) {
+            super(sprite);
+            this.x = width / 2 - 10;
+            this.y = height - 100;
+            this.anchor.x = 0.5;
+            this.anchor.y = 0.5;
+        }
+    }
+
+    const obstacleWeights: { obstacle: typeof Obstacle, weight: number }[] = [
+        { obstacle: Gate, weight: 0.6 },
+        { obstacle: MovingGate, weight: 0.3 },
+        { obstacle: Maze, weight: 0.1 },
+    ]
+
+    const getObstacle = () => {
+        const ObstacleClass = randomize(obstacleWeights);
+        const obstacle = new ObstacleClass();
+        obstacle.draw();
+        return obstacle;
+    }
+
+    function noop() {
+
+    }
 
     //Define variables that might be used in more 
     //than one function
-    let state, explorer, treasure, blobs, chimes, exit, player, dungeon,
-        door, healthBar, message, gameScene, gameOverScene, enemies, id;
+    let state: Function = noop, gameScene: PIXI.Container;
+    const obstacles: Obstacle[] = [];
+    let player: Player;
+
+    const addObstacle = () => {
+        const obstacle = getObstacle();
+        obstacles.push(obstacle);
+        gameScene.addChild(obstacle);
+
+        return obstacle;
+    };
+
+    const addPlayer = (sprite) => {
+        player = new Player(sprite);
+        gameScene.addChild(player);
+        return player;
+    };
+
+    const left = keyboard(37),
+        up = keyboard(38),
+        right = keyboard(39),
+        down = keyboard(40),
+        enter = keyboard(13),
+        space = keyboard(32);
 
     function setup() {
         //Make the game scene and add it to the stage
         gameScene = new Container();
-        stage.addChild(gameScene);
-        //Make the sprites and add them to the `gameScene`
-        //Create an alias for the texture atlas frame ids
-        id = resources["images/treasureHunter.json"].textures;
-        //Dungeon
-        dungeon = new Sprite(id["dungeon.png"]);
-        gameScene.addChild(dungeon);
-        //Door
-        door = new Sprite(id["door.png"]);
-        door.position.set(32, 0);
-        gameScene.addChild(door);
-        //Explorer
-        explorer = new Sprite(id["explorer.png"]);
-        explorer.x = 68;
-        explorer.y = gameScene.height / 2 - explorer.height / 2;
-        explorer.vx = 0;
-        explorer.vy = 0;
-        gameScene.addChild(explorer);
 
-        //Treasure
-        treasure = new Sprite(id["treasure.png"]);
-        treasure.x = gameScene.width - treasure.width - 48;
-        treasure.y = gameScene.height / 2 - treasure.height / 2;
-        gameScene.addChild(treasure);
-        //Make the blobs
-        let numberOfBlobs = 6,
-            spacing = 48,
-            xOffset = 150,
-            speed = 2,
-            direction = 1;
-        //An array to store all the blob monsters
-        blobs = [];
-        //Make as many blobs as there are `numberOfBlobs`
-        for (let i = 0; i < numberOfBlobs; i++) {
-            //Make a blob
-            const blob = new Sprite(id["blob.png"]);
-            //Space each blob horizontally according to the `spacing` value.
-            //`xOffset` determines the point from the left of the screen
-            //at which the first blob should be added
-            const x = spacing * i + xOffset;
-            //Give the blob a random y position
-            const y = randomInt(0, stage.height - blob.height);
-            //Set the blob's position
-            blob.x = x;
-            blob.y = y;
-            //Set the blob's vertical velocity. `direction` will be either `1` or
-            //`-1`. `1` means the enemy will move down and `-1` means the blob will
-            //move up. Multiplying `direction` by `speed` determines the blob's
-            //vertical direction
-            blob.vy = speed * direction;
-            //Reverse the direction for the next blob
-            direction *= -1;
-            //Push the blob into the `blobs` array
-            blobs.push(blob);
-            //Add the blob to the `gameScene`
-            gameScene.addChild(blob);
-        }
-        //Create the health bar
-        healthBar = new Container();
-        healthBar.position.set(stage.width - 170, 6)
-        gameScene.addChild(healthBar);
-        //Create the black background rectangle
-        const innerBar = new Graphics();
-        innerBar.beginFill(0x000000);
-        innerBar.drawRect(0, 0, 128, 8);
-        innerBar.endFill();
-        healthBar.addChild(innerBar);
-        //Create the front red rectangle
-        const outerBar = new Graphics();
-        outerBar.beginFill(0xFF3300);
-        outerBar.drawRect(0, 0, 128, 8);
-        outerBar.endFill();
-        healthBar.addChild(outerBar);
-        healthBar.outer = outerBar;
-        //Create the `gameOver` scene
-        gameOverScene = new Container();
-        stage.addChild(gameOverScene);
-        //Make the `gameOver` scene invisible when the game first starts
-        gameOverScene.visible = false;
-        //Create the text sprite and add it to the `gameOver` scene
-        message = new Text(
-            "The End!"
-        );
-        message.x = 120;
-        message.y = stage.height / 2 - 32;
-        gameOverScene.addChild(message);
-        //Capture the keyboard arrow keys
-        const left = keyboard(37),
-            up = keyboard(38),
-            right = keyboard(39),
-            down = keyboard(40);
-        //Left arrow key `press` method
+        stage.addChild(gameScene);
+        //Set the game state
+
+        addObstacle();
+
+        addPlayer(resources["images/rocket.png"].texture);
+
         left.press = function () {
-            //Change the explorer's velocity when the key is pressed
-            explorer.vx = -5;
-            explorer.vy = 0;
+
         };
-        //Left arrow key `release` method
         left.release = function () {
-            //If the left arrow has been released, and the right arrow isn't down,
-            //and the explorer isn't moving vertically:
-            //Stop the explorer
-            if (!right.isDown && explorer.vy === 0) {
-                explorer.vx = 0;
-            }
         };
-        //Up
         up.press = function () {
-            explorer.vy = -5;
-            explorer.vx = 0;
-        };
+        }
         up.release = function () {
-            if (!down.isDown && explorer.vx === 0) {
-                explorer.vy = 0;
-            }
         };
-        //Right
         right.press = function () {
-            explorer.vx = 5;
-            explorer.vy = 0;
+
         };
         right.release = function () {
-            if (!left.isDown && explorer.vy === 0) {
-                explorer.vx = 0;
-            }
         };
-        //Down
         down.press = function () {
-            explorer.vy = 5;
-            explorer.vx = 0;
         };
         down.release = function () {
-            if (!up.isDown && explorer.vx === 0) {
-                explorer.vy = 0;
-            }
         };
-        //Set the game state
-        state = play;
+        enter.press = function () {
+            state = noop;
+        };
+        enter.release = function () {
+        };
+        space.press = function () {
+        };
+        space.release = function () {
+        };
 
-        //Start the game loop
+        const un = addEventListener('keydown', () => {
+            state = play;
+            un();
+        });
+
         gameLoop();
     }
+
     function gameLoop() {
         //Loop this function 60 times per second
         requestAnimationFrame(gameLoop);
@@ -197,65 +325,54 @@ const start = () => {
         //Render the stage
         renderer.render(stage);
     }
+
     function play() {
-        //use the explorer's velocity to make it move
-        explorer.x += explorer.vx;
-        explorer.y += explorer.vy;
-        //Contain the explorer inside the area of the dungeon
-        contain(explorer, { x: 28, y: 10, width: 488, height: 480 });
-        //contain(explorer, stage);
-        //Set `explorerHit` to `false` before checking for a collision
-        let explorerHit = false;
-        //Loop through all the sprites in the `enemies` array
-        blobs.forEach(function (blob) {
-            //Move the blob
-            blob.y += blob.vy;
-            //Check the blob's screen boundaries
-            const blobHitsWall = contain(blob, { x: 28, y: 10, width: 488, height: 480 });
-            //If the blob hits the top or bottom of the stage, reverse
-            //its direction
-            if (blobHitsWall === "top" || blobHitsWall === "bottom") {
-                blob.vy *= -1;
+
+        if (space.isDown || enter.isDown) {
+            if (dy < max_dy) {
+                dy += (1 - dy / (max_dy - dy)) * ddy;
             }
-            //Test for a collision. If any of the enemies are touching
-            //the explorer, set `explorerHit` to `true`
-            if (hitTestRectangle(explorer, blob)) {
-                explorerHit = true;
-            }
-        });
-        //If the explorer is hit...
-        if (explorerHit) {
-            //Make the explorer semi-transparent
-            explorer.alpha = 0.5;
-            //Reduce the width of the health bar's inner rectangle by 1 pixel
-            healthBar.outer.width -= 1;
         } else {
-            //Make the explorer fully opaque (non-transparent) if it hasn't been hit
-            explorer.alpha = 1;
+            if (dy > -max_dy) {
+                dy -= (1 - dy / (-max_dy - dy)) * ddy;
+            }
         }
-        //Check for a collision between the explorer and the treasure
-        if (hitTestRectangle(explorer, treasure)) {
-            //If the treasure is touching the explorer, center it over the explorer
-            treasure.x = explorer.x + 8;
-            treasure.y = explorer.y + 8;
+
+        if (left.isDown) {
+            player.left();
+        } else if (right.isDown) {
+            player.right();
         }
-        //Does the explorer have enough health? If the width of the `innerBar`
-        //is less than zero, end the game and display "You lost!"
-        if (healthBar.outer.width < 0) {
-            state = end;
-            message.text = "You lost!";
+
+        player.move();
+
+        for (let i = 0, len = obstacles.length; i < len; i++) {
+            const obstacle = obstacles[i];
+
+            if (obstacle.drawEveryFrame) {
+                obstacle.draw();
+            }
+
+            obstacle.y += dy;
+
+            if (collides(player, obstacle)) {
+                state = end;
+                break;
+            }
         }
-        //If the explorer has brought the treasure to the exit,
-        //end the game and display "You won!"
-        if (hitTestRectangle(treasure, door)) {
-            state = end;
-            message.text = "You won!";
+
+        const lastObstacle = obstacles[obstacles.length - 1];
+
+        if (lastObstacle.y - lastObstacle.height > height / 2) {
+            addObstacle();
         }
     }
+
     function end() {
-        gameScene.visible = false;
-        gameOverScene.visible = true;
+        document.getElementById('message').innerText = 'Game Over.';
+        state = noop;
     }
+
     /* Helper functions */
     function contain(sprite, container) {
         let collision = undefined;
@@ -330,13 +447,20 @@ const start = () => {
 
 
     //The `keyboard` helper function
-    function keyboard(keyCode) {
-        const key = {} as any;
-        key.code = keyCode;
-        key.isDown = false;
-        key.isUp = true;
-        key.press = undefined;
-        key.release = undefined;
+    function keyboard(keyCode: number) {
+        const key: {
+            code: number,
+            isDown: boolean,
+            isUp: boolean,
+            press?: Function,
+            release?: Function,
+            downHandler?: Function,
+            upHandler?: Function
+        } = {
+                code: keyCode,
+                isDown: false,
+                isUp: true,
+            };
         //The `downHandler`
         key.downHandler = function (event) {
             if (event.keyCode === key.code) {
@@ -366,11 +490,13 @@ const start = () => {
         return key;
     }
 
+    return () => state = noop;
+
 };
 
 const render = () => {
     reset();
-    start();
+    return start();
 };
 
 export default render;

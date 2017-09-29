@@ -25,8 +25,6 @@ const devServerConfig = {
   stats: { colors: true } // Pretty colors in console
 };
 
-console.log(devServerConfig.contentBase)
-
 try {
   const server = new WebpackDevServer(webpack(webpackConfig(env)), devServerConfig);
   server.listen(3000, 'localhost');

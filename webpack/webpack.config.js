@@ -33,7 +33,7 @@ module.exports = env => {
       filename: '[name].[hash].js',
       sourceMapFilename: '[name].[hash].map.js',
       path: path.join(__dirname, '../build/'),
-      // publicPath: '/'
+      // publicPath: '/', can uncomment if you want everything relative to root '/'
     },
 
     module: {
@@ -41,7 +41,9 @@ module.exports = env => {
         {
           test: /\.tsx?$/,
           exclude: /node_modules/,
-          loader: ['react-hot-loader/webpack', 'awesome-typescript-loader'],
+          loader: ['react-hot-loader/webpack', env.prod
+            ? 'awesome-typescript-loader?target=es5'
+            : 'awesome-typescript-loader'],
         },
         {
           test: /\.(css)$/,
@@ -52,20 +54,14 @@ module.exports = env => {
               'css-loader?modules=true&minimize&-autoprefixer',
               'postcss-loader'
             ]
-            : ExtractTextPlugin.extract({ fallback: 'style-loader', loader: 'css-loader?modules=true&minimize&-autoprefixer!postcss-loader' }),
+            : ExtractTextPlugin.extract({ fallback: 'style-loader', use: 'css-loader?modules=true&minimize&-autoprefixer!postcss-loader' }),
         },
         {
           test: /\.(png|jpg)$/,
           loader: 'url-loader?limit=8192'
-        },
-        {
-          test: /\.(json)$/,
-          loader: 'json-loader'
         }
       ],
     },
-
-
 
     plugins: removeEmpty([
       new webpack.optimize.CommonsChunkPlugin({

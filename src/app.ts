@@ -44,7 +44,7 @@ const displayScores = () => {
     const stored = localStorage.getItem('scores');
     const scores = stored ? JSON.parse(stored) : [];
     document.getElementById('scores').innerHTML = `
-        <ul>${scores.map(s => `<li>${s}</li>`).join('')}</ul>
+        <ol>${scores.map(s => `<li><b>${s}</b></li>`).join('')}</ol>
     `;
 }
 

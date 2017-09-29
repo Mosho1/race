@@ -86,7 +86,9 @@ const start = () => {
         .load(setup);
 
     class Obstacle extends Graphics {
+        points = 1;
         drawEveryFrame = false;
+        passed = false;
         draw() {
             this.clear();
         }
@@ -119,6 +121,8 @@ const start = () => {
     class MovingGate extends Gate {
         private holeSpeed = hole / width / 20;
         drawEveryFrame = true;
+
+        points = 2;
         draw() {
             super.draw();
             if (this.holePosition > 1 - hole / width / 2) {
@@ -133,6 +137,7 @@ const start = () => {
     }
 
     class Maze extends Obstacle {
+        points = 3;
         private gateHeight = dim;
         private holeWidth = hole;
 
@@ -239,15 +244,14 @@ const start = () => {
         return obstacle;
     }
 
-    function noop() {
-
-    }
+    function noop() { }
 
     //Define variables that might be used in more 
     //than one function
     let state: Function = noop, gameScene: PIXI.Container;
     const obstacles: Obstacle[] = [];
     let player: Player;
+    let score: PIXI.Text;
 
     const addObstacle = () => {
         const obstacle = getObstacle();
@@ -263,6 +267,18 @@ const start = () => {
         return player;
     };
 
+    const addScore = () => {
+        score = new PIXI.Text('Score: 0', {
+            fontFamily: 'Arial',
+            fontSize: 24,
+            fill: 0xff1010,
+            align: 'center'
+        });
+        score.x = 20;
+        score.y = 20;
+        gameScene.addChild(score);
+    };
+
     const left = keyboard(37),
         up = keyboard(38),
         right = keyboard(39),
@@ -273,13 +289,12 @@ const start = () => {
     function setup() {
         //Make the game scene and add it to the stage
         gameScene = new Container();
-
         stage.addChild(gameScene);
-        //Set the game state
 
         addObstacle();
-
         addPlayer(resources["images/rocket.png"].texture);
+        addScore();
+
 
         left.press = function () {
 
@@ -344,6 +359,7 @@ const start = () => {
             player.right();
         }
 
+        const prevY = player.y;
         player.move();
 
         for (let i = 0, len = obstacles.length; i < len; i++) {
@@ -358,6 +374,12 @@ const start = () => {
             if (collides(player, obstacle)) {
                 state = end;
                 break;
+            }
+
+            if (!obstacle.passed && obstacle.y - obstacle.height > player.y) {
+                obstacle.passed = true;
+                player.score += obstacle.points;
+                score.text = 'Score: ' + player.score;
             }
         }
 

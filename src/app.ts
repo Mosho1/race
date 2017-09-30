@@ -82,6 +82,9 @@ const start = (cb) => {
     let max_dy = 50.0;
     let hole = width / 4;
 
+    let lastCalledTime;
+    let fps;
+
     let isMousePressed = false;
 
     addEventListener('mousedown', () => isMousePressed = true);
@@ -301,6 +304,9 @@ const start = (cb) => {
         space = keyboard(32);
 
     function setup() {
+
+        document.getElementById('message').innerText = '';
+
         //Make the game scene and add it to the stage
         gameScene = new Container();
         stage.addChild(gameScene);
@@ -346,7 +352,22 @@ const start = (cb) => {
         gameLoop();
     }
 
+    let framesToCalculate = 20;
+
     function gameLoop() {
+        if (framesToCalculate > 0) {
+            if (!lastCalledTime) {
+                lastCalledTime = Date.now();
+                fps = 0;
+            }
+            const delta = (Date.now() - lastCalledTime) / 1000;
+            lastCalledTime = Date.now();
+            fps = 1 / delta;
+
+            ddy = 0.4 * 60 / fps;
+            framesToCalculate--;
+        }
+
         //Loop this function 60 times per second
         requestAnimationFrame(gameLoop);
         //Update the current game state
